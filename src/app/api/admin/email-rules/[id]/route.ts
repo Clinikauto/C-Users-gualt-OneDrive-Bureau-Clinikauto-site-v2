@@ -8,6 +8,22 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+/**
+ * Normalise a senders/subjects/keywords value to a JSON array string.
+ * Accepts either an array (from updated UI) or a JSON string (legacy).
+ */
+function toJsonArray(val: unknown): string {
+  if (Array.isArray(val)) return JSON.stringify(val)
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val)
+      if (Array.isArray(parsed)) return JSON.stringify(parsed)
+    } catch { /* fall through */ }
+  }
+  return '[]'
+}
+
+// In Next.js 15, route segment params are async – keep the Promise signature.
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const session = await getServerSession(authOptions)
@@ -23,9 +39,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     where: { id },
     data: {
       ...(name !== undefined && { name }),
-      ...(senders !== undefined && { senders: JSON.stringify(senders) }),
-      ...(subjects !== undefined && { subjects: JSON.stringify(subjects) }),
-      ...(keywords !== undefined && { keywords: JSON.stringify(keywords) }),
+      ...(senders !== undefined && { senders: toJsonArray(senders) }),
+      ...(subjects !== undefined && { subjects: toJsonArray(subjects) }),
+      ...(keywords !== undefined && { keywords: toJsonArray(keywords) }),
       ...(category !== undefined && { category }),
       ...(imapFolder !== undefined && { imapFolder }),
       ...(autoReply !== undefined && { autoReply: Boolean(autoReply) }),

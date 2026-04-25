@@ -19,18 +19,54 @@ import { processEmails } from '@/lib/mail/processor'
 import { sendAdminDigest } from '@/lib/mail/smtpClient'
 import { prisma } from '@/lib/prisma'
 
-const intervalMin = Number(process.env.MAIL_POLL_INTERVAL_MIN ?? 5)
+// ─── Interval validation ──────────────────────────────────────────────────────
 
-// ─── Poll job ─────────────────────────────────────────────────────────────────
+const DEFAULT_INTERVAL = 5
+const MIN_INTERVAL = 1
+const MAX_INTERVAL = 59
+
+function parseIntervalMin(raw: string | undefined): number {
+  const n = Number(raw)
+  if (Number.isFinite(n) && Number.isInteger(n) && n >= MIN_INTERVAL && n <= MAX_INTERVAL) {
+    return n
+  }
+  if (raw !== undefined) {
+    console.warn(
+      `[mailWorker] Invalid MAIL_POLL_INTERVAL_MIN="${raw}". Using default ${DEFAULT_INTERVAL} minute(s).`
+    )
+  }
+  return DEFAULT_INTERVAL
+}
+
+const intervalMin = parseIntervalMin(process.env.MAIL_POLL_INTERVAL_MIN)
+
+// ─── Poll job (with concurrency guard) ───────────────────────────────────────
+
+let isPolling = false
+let pollQueued = false
 
 async function pollMailbox() {
-  console.log(`[mailWorker] Polling mailbox at ${new Date().toISOString()}`)
+  if (isPolling) {
+    pollQueued = true
+    console.log('[mailWorker] Poll already in progress – queuing another run')
+    return
+  }
+
+  isPolling = true
   try {
-    const emails = await fetchUnseenEmails()
-    console.log(`[mailWorker] Found ${emails.length} unseen message(s)`)
-    await processEmails(emails)
-  } catch (err) {
-    console.error('[mailWorker] Poll error:', err)
+    do {
+      pollQueued = false
+      console.log(`[mailWorker] Polling mailbox at ${new Date().toISOString()}`)
+      try {
+        const emails = await fetchUnseenEmails()
+        console.log(`[mailWorker] Found ${emails.length} unseen message(s)`)
+        await processEmails(emails)
+      } catch (err) {
+        console.error('[mailWorker] Poll error:', err)
+      }
+    } while (pollQueued)
+  } finally {
+    isPolling = false
   }
 }
 

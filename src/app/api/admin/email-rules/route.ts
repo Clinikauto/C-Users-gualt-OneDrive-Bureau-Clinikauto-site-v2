@@ -8,6 +8,21 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+/**
+ * Normalise a senders/subjects/keywords value to a JSON array string.
+ * Accepts either an array (from updated UI) or a JSON-encoded string (legacy).
+ */
+function toJsonArray(val: unknown): string {
+  if (Array.isArray(val)) return JSON.stringify(val)
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val)
+      if (Array.isArray(parsed)) return JSON.stringify(parsed)
+    } catch { /* fall through */ }
+  }
+  return '[]'
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions)
   if (!session || session.user?.role !== 'ADMIN') {
@@ -34,9 +49,9 @@ export async function POST(req: NextRequest) {
   const rule = await prisma.emailRule.create({
     data: {
       name,
-      senders: JSON.stringify(Array.isArray(senders) ? senders : []),
-      subjects: JSON.stringify(Array.isArray(subjects) ? subjects : []),
-      keywords: JSON.stringify(Array.isArray(keywords) ? keywords : []),
+      senders: toJsonArray(senders),
+      subjects: toJsonArray(subjects),
+      keywords: toJsonArray(keywords),
       category,
       imapFolder,
       autoReply: Boolean(autoReply),

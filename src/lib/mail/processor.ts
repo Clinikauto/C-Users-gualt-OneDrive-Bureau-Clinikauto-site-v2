@@ -13,6 +13,7 @@ import { prisma } from '@/lib/prisma'
 import { markAsSeen, moveToFolder, type RawEmail } from './imapClient'
 import { classifyEmail, type ClassificationResult } from './classifier'
 import { sendAutoReply } from './smtpClient'
+import { Prisma } from '@prisma/client'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,12 +48,6 @@ function extractVehicleInfo(text: string): { make: string; model: string; year: 
  * Process a single raw email end-to-end.
  */
 export async function processEmail(email: RawEmail): Promise<void> {
-  // Skip if already logged (idempotency)
-  const existing = await prisma.emailLog.findUnique({
-    where: { messageId: email.messageId },
-  })
-  if (existing) return
-
   let result: ClassificationResult
   try {
     result = await classifyEmail(email)
@@ -60,20 +55,27 @@ export async function processEmail(email: RawEmail): Promise<void> {
     result = { category: 'GENERAL', imapFolder: 'Clinikauto/General', autoReply: false }
   }
 
-  // 1. Persist EmailLog
-  const log = await prisma.emailLog.create({
-    data: {
-      messageId: email.messageId,
-      from: email.from,
-      to: email.to,
-      subject: email.subject,
-      receivedAt: email.receivedAt,
-      category: result.category,
-      imapFolder: result.imapFolder,
-      status: 'PENDING',
-      ruleId: result.ruleId ?? null,
-    },
-  })
+  // 1. Persist EmailLog – atomic create; skip if already processed (idempotency)
+  let log: Awaited<ReturnType<typeof prisma.emailLog.create>>
+  try {
+    log = await prisma.emailLog.create({
+      data: {
+        messageId: email.messageId,
+        from: email.from,
+        to: email.to,
+        subject: email.subject,
+        receivedAt: email.receivedAt,
+        category: result.category,
+        imapFolder: result.imapFolder,
+        status: 'PENDING',
+        ruleId: result.ruleId ?? null,
+      },
+    })
+  } catch (err) {
+    // P2002 = unique constraint violation → message already logged by another worker
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') return
+    throw err
+  }
 
   let linkedType: string | null = null
   let linkedId: string | null = null

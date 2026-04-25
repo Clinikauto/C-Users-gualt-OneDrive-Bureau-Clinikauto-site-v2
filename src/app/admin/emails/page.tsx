@@ -20,9 +20,9 @@ interface EmailLog {
 interface EmailRule {
   id: string
   name: string
-  senders: string
-  subjects: string
-  keywords: string
+  senders: string | string[]
+  subjects: string | string[]
+  keywords: string | string[]
   category: string
   imapFolder: string
   autoReply: boolean
@@ -55,6 +55,18 @@ const CATEGORY_COLORS: Record<string, string> = {
   GENERAL: 'bg-gray-100 text-gray-700',
 }
 
+/** Safely parse a value that may be a JSON array string or already an array. */
+function parseArray(val: string | string[] | undefined): string[] {
+  if (Array.isArray(val)) return val
+  if (!val) return []
+  try {
+    const parsed = JSON.parse(val)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function Badge({ text, colorClass }: { text: string; colorClass: string }) {
@@ -76,9 +88,9 @@ function RuleForm({
     name: initial?.name ?? '',
     category: initial?.category ?? 'CONTACT',
     imapFolder: initial?.imapFolder ?? '',
-    senders: initial?.senders ? JSON.parse(initial.senders).join(', ') : '',
-    subjects: initial?.subjects ? JSON.parse(initial.subjects).join(', ') : '',
-    keywords: initial?.keywords ? JSON.parse(initial.keywords).join(', ') : '',
+    senders: parseArray(initial?.senders).join(', '),
+    subjects: parseArray(initial?.subjects).join(', '),
+    keywords: parseArray(initial?.keywords).join(', '),
     autoReply: initial?.autoReply ?? false,
     active: initial?.active ?? true,
     priority: initial?.priority ?? 0,
@@ -96,9 +108,9 @@ function RuleForm({
       name: form.name,
       category: form.category,
       imapFolder: form.imapFolder,
-      senders: JSON.stringify(splitCSV(form.senders)),
-      subjects: JSON.stringify(splitCSV(form.subjects)),
-      keywords: JSON.stringify(splitCSV(form.keywords)),
+      senders: splitCSV(form.senders),
+      subjects: splitCSV(form.subjects),
+      keywords: splitCSV(form.keywords),
       autoReply: form.autoReply,
       active: form.active,
       priority: Number(form.priority),
@@ -496,14 +508,14 @@ export default function AdminEmailsPage() {
                         </div>
                         <div className="text-xs text-gray-500 space-y-0.5">
                           <p>📁 {rule.imapFolder}</p>
-                          {JSON.parse(rule.senders).length > 0 && (
-                            <p>👤 {JSON.parse(rule.senders).join(', ')}</p>
+                          {parseArray(rule.senders).length > 0 && (
+                            <p>👤 {parseArray(rule.senders).join(', ')}</p>
                           )}
-                          {JSON.parse(rule.subjects).length > 0 && (
-                            <p>📝 Objet : {JSON.parse(rule.subjects).join(', ')}</p>
+                          {parseArray(rule.subjects).length > 0 && (
+                            <p>📝 Objet : {parseArray(rule.subjects).join(', ')}</p>
                           )}
-                          {JSON.parse(rule.keywords).length > 0 && (
-                            <p>🔍 Corps : {JSON.parse(rule.keywords).join(', ')}</p>
+                          {parseArray(rule.keywords).length > 0 && (
+                            <p>🔍 Corps : {parseArray(rule.keywords).join(', ')}</p>
                           )}
                         </div>
                       </div>
