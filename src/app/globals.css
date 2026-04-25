@@ -4,24 +4,54 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111827;
+  --clinik-red: #DC2626;
+  --clinik-blue: #2563EB;
+  --clinik-dark: #111827;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+::-webkit-scrollbar-thumb {
+  background: #DC2626;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b91c1c;
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-clinik-red hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 inline-flex items-center gap-2;
+  }
+  .btn-secondary {
+    @apply bg-clinik-blue hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 inline-flex items-center gap-2;
+  }
+  .btn-outline {
+    @apply border-2 border-white text-white hover:bg-white hover:text-clinik-dark font-semibold py-3 px-6 rounded-lg transition-colors duration-200 inline-flex items-center gap-2;
+  }
+  .card {
+    @apply bg-white rounded-xl shadow-md overflow-hidden;
+  }
+  .section-title {
+    @apply text-3xl font-bold text-clinik-dark mb-2;
+  }
+  .section-subtitle {
+    @apply text-gray-500 mb-8;
   }
 }
