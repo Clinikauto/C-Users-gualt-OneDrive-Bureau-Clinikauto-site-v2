@@ -11,6 +11,9 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        "clinik-red": "#DC2626",
+        "clinik-blue": "#2563EB",
+        "clinik-dark": "#111827",
       },
     },
   },
