@@ -17,17 +17,31 @@ interface EmailLog {
   linkedId: string | null
 }
 
+/** API response shape – senders/subjects/keywords are stored as JSON strings in the DB. */
 interface EmailRule {
   id: string
   name: string
-  senders: string | string[]
-  subjects: string | string[]
-  keywords: string | string[]
+  senders: string
+  subjects: string
+  keywords: string
   category: string
   imapFolder: string
   autoReply: boolean
   active: boolean
   priority: number
+}
+
+/** Form submission payload – uses arrays for the array fields. */
+interface RulePayload {
+  name?: string
+  senders?: string[]
+  subjects?: string[]
+  keywords?: string[]
+  category?: string
+  imapFolder?: string
+  autoReply?: boolean
+  active?: boolean
+  priority?: number
 }
 
 const CATEGORIES = ['CONTACT', 'INVOICE', 'REVIEW', 'SPAM', 'GENERAL']
@@ -55,9 +69,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   GENERAL: 'bg-gray-100 text-gray-700',
 }
 
-/** Safely parse a value that may be a JSON array string or already an array. */
-function parseArray(val: string | string[] | undefined): string[] {
-  if (Array.isArray(val)) return val
+/** Safely parse a JSON array string from the API into a string array. */
+function parseArray(val: string | undefined): string[] {
   if (!val) return []
   try {
     const parsed = JSON.parse(val)
@@ -81,7 +94,7 @@ function RuleForm({
   onCancel,
 }: {
   initial?: Partial<EmailRule>
-  onSave: (data: Partial<EmailRule>) => void
+  onSave: (data: RulePayload) => void
   onCancel: () => void
 }) {
   const [form, setForm] = useState({
@@ -282,7 +295,7 @@ export default function AdminEmailsPage() {
   useEffect(() => { void fetchRules() }, [fetchRules])
 
   // ── Create / update rule ──
-  async function saveRule(data: Partial<EmailRule>) {
+  async function saveRule(data: RulePayload) {
     if (editingRule) {
       await fetch(`/api/admin/email-rules/${editingRule.id}`, {
         method: 'PUT',

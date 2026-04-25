@@ -65,7 +65,9 @@ function extractTextFromMime(source: string): string {
     } else if (headers.includes('content-transfer-encoding: base64')) {
       try {
         text = Buffer.from(text.replace(/\s/g, ''), 'base64').toString('utf-8')
-      } catch { /* ignore */ }
+      } catch (err) {
+        console.warn('[imapClient] base64 body decoding failed:', err)
+      }
     }
     // Strip HTML tags if content is HTML
     if (headers.includes('content-type: text/html')) {
