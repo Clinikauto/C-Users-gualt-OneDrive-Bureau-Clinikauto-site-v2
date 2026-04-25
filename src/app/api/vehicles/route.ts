@@ -20,8 +20,12 @@ export async function POST(req: NextRequest) {
     if (!make || !model || !year) {
       return NextResponse.json({ error: 'Marque, modèle et année requis.' }, { status: 400 })
     }
+    const parsedYear = parseInt(year, 10)
+    if (isNaN(parsedYear) || parsedYear < 1900 || parsedYear > new Date().getFullYear() + 1) {
+      return NextResponse.json({ error: 'Année invalide.' }, { status: 400 })
+    }
     const vehicle = await prisma.vehicle.create({
-      data: { userId, make, model, year: parseInt(year), licensePlate: licensePlate || null, vin: vin || null },
+      data: { userId, make, model, year: parsedYear, licensePlate: licensePlate || null, vin: vin || null },
     })
     return NextResponse.json(vehicle, { status: 201 })
   } catch {
