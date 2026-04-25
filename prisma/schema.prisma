@@ -89,3 +89,39 @@ model ContactRequest {
   status        String   @default("NEW")
   createdAt     DateTime @default(now())
 }
+
+// ─── Email automation models ───────────────────────────────────────────────────
+
+model EmailRule {
+  id        String   @id @default(cuid())
+  name      String
+  // Matching criteria (stored as JSON arrays serialised to strings)
+  senders   String   @default("[]")   // ["@example.com", "boss@acme.com"]
+  subjects  String   @default("[]")   // keywords matched against subject
+  keywords  String   @default("[]")   // keywords matched against body
+  // Action
+  category  String   // CONTACT | INVOICE | REVIEW | SPAM | GENERAL
+  imapFolder String  // target IMAP folder, e.g. "Clinikauto/Devis"
+  autoReply Boolean  @default(false)
+  active    Boolean  @default(true)
+  priority  Int      @default(0)      // higher = evaluated first
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailLog {
+  id          String   @id @default(cuid())
+  messageId   String   @unique           // IMAP Message-ID header
+  from        String
+  to          String
+  subject     String
+  receivedAt  DateTime
+  category    String   @default("GENERAL")
+  imapFolder  String   @default("INBOX")
+  status      String   @default("PENDING") // PENDING | PROCESSED | IGNORED | ERROR
+  ruleId      String?
+  linkedType  String?  // ContactRequest | Intervention | Review
+  linkedId    String?
+  autoReplied Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
